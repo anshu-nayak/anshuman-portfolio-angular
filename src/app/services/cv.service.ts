@@ -86,7 +86,7 @@ class CvWriter {
   }
 
   private heading(title: string) {
-    this.ensure(14)
+    this.ensure(28) // keep the heading with the first entry below it
     this.y += 3
     this.setFont(11, 'bold', ACCENT)
     this.doc.text(title.toUpperCase(), M, this.y + 4)
@@ -99,7 +99,7 @@ class CvWriter {
 
   // Title line on the left with a right-aligned date on the same baseline
   private titleRow(left: string, right: string | null, size = 10.5) {
-    this.ensure(lineH(size) + 2)
+    this.ensure(lineH(size) + 16) // keep the title with at least a couple of lines below it
     this.setFont(size, 'bold')
     const rightW = right ? this.doc.getTextWidth(clean(right)) + 4 : 0
     const lines: string[] = this.doc.splitTextToSize(clean(left), CONTENT_W - rightW)
