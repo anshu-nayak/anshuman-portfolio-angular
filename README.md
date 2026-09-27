@@ -2,8 +2,10 @@
 
 The Angular version of my personal portfolio: experience, projects, skills, education and certifications. It uses Angular 19 standalone components, signals and the built-in control flow, has no backend or database, and works on phones, tablets and desktops, with a light/dark theme.
 
-**Live site:** https://anshu-nayak.github.io/anshuman-portfolio-angular/
-**React version:** https://github.com/anshu-nayak/anshuman-portfolio
+| Version | Live site | Source |
+| --- | --- | --- |
+| React | https://anshu-nayak.github.io/anshuman-portfolio/ | https://github.com/anshu-nayak/anshuman-portfolio |
+| Angular | https://anshu-nayak.github.io/anshuman-portfolio-angular/ | https://github.com/anshu-nayak/anshuman-portfolio-angular |
 
 ## Run locally
 
