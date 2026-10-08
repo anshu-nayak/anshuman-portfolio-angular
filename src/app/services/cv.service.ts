@@ -12,6 +12,12 @@ const PAGE_H = 297
 const M = 16 // page margin (mm)
 const CONTENT_W = PAGE_W - M * 2
 
+// The site shows everything; the CV is trimmed to stay at about two pages
+const DETAILED_JOBS = 1 // most recent jobs that keep their bullets; older roles get one line each
+const CV_CATEGORIES: string[] = ['Professional', 'Personal'] // Analytics/Academic work is already in the Education notes
+const CV_HIGHLIGHTS: Record<string, number> = { Professional: 0, Personal: 2 } // work projects are already told in the experience bullets
+const CV_STACK = 6 // stack items per project
+
 const ACCENT: RGB = [79, 70, 229]
 const TEXT: RGB = [15, 23, 42]
 const MUTED: RGB = [91, 100, 119]
@@ -97,6 +103,25 @@ class CvWriter {
     this.y += 3
   }
 
+  // Bold label followed by wrapped text, e.g. "Frontend: Angular 18, TypeScript, ..."
+  private labelRow(label: string, text: string) {
+    const doc = this.doc
+    this.setFont(9.5, 'bold')
+    const labelText = `${clean(label)}: `
+    const labelW = doc.getTextWidth(labelText) + 1.2
+    this.setFont(9.5)
+    const lines: string[] = doc.splitTextToSize(clean(text), CONTENT_W - labelW)
+    this.ensure(lineH(9.5) * lines.length)
+    this.setFont(9.5, 'bold')
+    doc.text(labelText, M, this.y + lineH(9.5) * 0.8)
+    this.setFont(9.5)
+    for (const ln of lines) {
+      doc.text(ln, M + labelW, this.y + lineH(9.5) * 0.8)
+      this.y += lineH(9.5)
+    }
+    this.y += 1
+  }
+
   // Title line on the left with a right-aligned date on the same baseline
   private titleRow(left: string, right: string | null, size = 10.5) {
     this.ensure(lineH(size) + 16) // keep the title with at least a couple of lines below it
@@ -171,26 +196,15 @@ class CvWriter {
 
     // ---------- Skills ----------
     this.heading('Technical Skills')
-    for (const g of skills) {
-      this.setFont(9.5, 'bold')
-      const label = `${clean(g.group)}: `
-      const labelW = doc.getTextWidth(label) + 1.2
-      this.setFont(9.5)
-      const lines: string[] = doc.splitTextToSize(clean(g.items.join(', ')), CONTENT_W - labelW)
-      this.ensure(lineH(9.5) * lines.length)
-      this.setFont(9.5, 'bold')
-      doc.text(label, M, this.y + lineH(9.5) * 0.8)
-      this.setFont(9.5)
-      for (const ln of lines) {
-        doc.text(ln, M + labelW, this.y + lineH(9.5) * 0.8)
-        this.y += lineH(9.5)
-      }
-      this.y += 1
-    }
+    for (const g of skills) this.labelRow(g.group, g.items.join(', '))
 
     // ---------- Experience ----------
     this.heading('Professional Experience')
-    for (const job of experience) {
+    for (const [i, job] of experience.entries()) {
+      if (i >= DETAILED_JOBS) {
+        this.titleRow(`${job.role} - ${job.company}`, job.period, 10)
+        continue
+      }
       this.titleRow(job.role, job.period)
       this.paragraph(`${job.company}  ·  ${job.location}`, { color: MUTED, gap: 1 })
       job.points.forEach((p) => this.bullet(p))
@@ -199,11 +213,16 @@ class CvWriter {
 
     // ---------- Projects ----------
     this.heading('Key Projects')
-    for (const p of projects) {
+    for (const p of projects.filter((p) => CV_CATEGORIES.includes(p.category))) {
+      if (!CV_HIGHLIGHTS[p.category]) {
+        // Role and client are already in the experience bullets, so just the title and stack
+        this.titleRow(p.title, null, 9.5)
+        this.paragraph(p.stack.slice(0, CV_STACK).join(', '), { size: 8.5, style: 'italic', color: MUTED, gap: 1.5 })
+        continue
+      }
       this.titleRow(p.title, p.status ? `${p.category} · ${p.status}` : p.category, 10)
-      this.paragraph(`${p.client}  ·  ${p.stack.join(', ')}`, { size: 8.5, style: 'italic', color: MUTED, gap: 1 })
-      this.paragraph(p.summary, { gap: 1 })
-      p.highlights.forEach((h) => this.bullet(h, 9))
+      this.paragraph(`${p.client}  ·  ${p.stack.slice(0, CV_STACK).join(', ')}`, { size: 8.5, style: 'italic', color: MUTED, gap: 1 })
+      p.highlights.slice(0, CV_HIGHLIGHTS[p.category]).forEach((h) => this.bullet(h, 9))
       for (const l of p.links ?? []) {
         this.setFont(8.5, 'normal', ACCENT)
         this.ensure(lineH(8.5))
@@ -221,18 +240,12 @@ class CvWriter {
       if (e.note) this.paragraph(e.note, { size: 9, gap: 2 })
     }
 
-    // ---------- Certifications & Publications ----------
-    this.heading('Certifications')
-    certifications.forEach((c) => this.bullet(`${c.title} - ${c.issuer}`))
-
-    if (publications.length) {
-      this.heading('Publications')
-      publications.forEach((p) => this.bullet(`${p.title} - ${p.venue}`))
-    }
-
-    // ---------- Languages ----------
-    this.heading('Languages')
-    this.paragraph(languages.map((l) => `${l.name} - ${l.level}`).join(sep))
+    // ---------- Certifications, Publications & Languages ----------
+    this.heading('Certifications & Languages')
+    certifications.forEach((c) => this.bullet(`${c.title} - ${c.issuer}`, 9))
+    this.y += 1
+    if (publications.length) this.labelRow('Publication', publications.map((p) => `${p.title} - ${p.venue}`).join('; '))
+    this.labelRow('Languages', languages.map((l) => `${l.name} - ${l.level}`).join(sep))
 
     // ---------- Footer: page numbers ----------
     const pages = doc.getNumberOfPages()
